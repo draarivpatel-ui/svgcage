@@ -1,0 +1,26 @@
+name: Bug report
+description: Report incorrect behavior that is not a private vulnerability
+title: "Bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened and what should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include a small SVG, script, options object, Node version, and svgcage version.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security check
+      description: Confirm this report does not include a live exploit for an unfixed vulnerability. Use Security Advisories for those reports.
+    validations:
+      required: true

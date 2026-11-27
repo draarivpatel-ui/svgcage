@@ -1,0 +1,70 @@
+{
+  "name": "svgcage",
+  "version": "1.0.0",
+  "description": "Zero-dependency SVG security sanitizer, strict XML parser, auditor and canonical serializer for Node.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/draarivpatel-ui/svgcage.git"
+  },
+  "homepage": "https://github.com/draarivpatel-ui/svgcage#readme",
+  "bugs": {
+    "url": "https://github.com/draarivpatel-ui/svgcage/issues"
+  },
+  "type": "module",
+  "main": "./cjs/index.cjs",
+  "module": "./src/index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.mjs",
+      "require": "./cjs/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "svgcage": "bin/svgcage.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "cjs",
+    "types",
+    "docs",
+    "examples",
+    "README.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:cjs": "node scripts/build-cjs.mjs",
+    "check:cjs": "node scripts/build-cjs.mjs --check",
+    "smoke": "node scripts/cli-smoke.mjs",
+    "test": "node scripts/run-tests.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "security",
+    "svg",
+    "svg-sanitizer",
+    "xss",
+    "xxe",
+    "ssrf",
+    "cwe-79",
+    "cwe-400",
+    "cwe-611",
+    "cwe-776",
+    "cwe-918",
+    "xml",
+    "zero-dependency"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "dependencies": {},
+  "devDependencies": {}
+}

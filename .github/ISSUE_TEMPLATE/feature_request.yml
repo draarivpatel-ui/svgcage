@@ -1,0 +1,19 @@
+name: Feature request
+description: Request a feature or hardening improvement
+title: "Feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What use case or threat is not handled well today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the API, policy, or behavior change and its compatibility impact.
+    validations:
+      required: true
