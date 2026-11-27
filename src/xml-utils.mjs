@@ -360,9 +360,11 @@ export function svgcageErrorToFinding(error, lineIndexer) {
 }
 
 export function escapeXmlText(value) {
-  return value.replace(/[&<]/g, (character) => character === '&' ? '&amp;' : '&lt;')
-    .replace(/\r/g, '&#13;')
-    .replace(/\]\]>/g, ']]&gt;');
+  return value.replace(/[&<>]/g, (character) => {
+    if (character === '&') return '&amp;';
+    if (character === '<') return '&lt;';
+    return '&gt;';
+  }).replace(/\r/g, '&#13;');
 }
 
 export function escapeXmlAttribute(value) {

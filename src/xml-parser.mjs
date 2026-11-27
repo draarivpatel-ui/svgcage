@@ -101,7 +101,7 @@ function decodeNumericReference(body, position) {
   let value = 0;
   let digits;
   let hexadecimal = false;
-  if (body.startsWith('#x') || body.startsWith('#X')) {
+  if (body.startsWith('#x')) {
     hexadecimal = true;
     digits = body.slice(2);
   } else {

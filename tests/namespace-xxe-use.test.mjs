@@ -365,6 +365,23 @@ test('huge CSS transform exponent is stripped under numeric cap', () => {
   expectUnsafe(svgWrap('<rect style="transform:translate(1e999,0)"/>'), 'SVGCAGE_MAX_COORDINATE_VALUE');
 });
 
+test('CSS infinite math constant is stripped under numeric cap', () => {
+  expectUnsafe(svgWrap('<rect style="stroke-width:calc(infinity)"/>'), 'SVGCAGE_MAX_COORDINATE_VALUE');
+});
+
+test('negative CSS infinite math constant is stripped under numeric cap', () => {
+  expectUnsafe(svgWrap('<rect style="transform:translate(calc(-infinity * 1px),0)"/>'), 'SVGCAGE_MAX_COORDINATE_VALUE');
+});
+
+test('unquoted font family containing infinity remains safe', () => {
+  expectSafe(svgWrap('<text style="font-family:infinity">x</text>'));
+});
+
+test('deeply nested safe CSS math functions are scanned linearly', () => {
+  const value = 'calc('.repeat(900) + '1px' + ')'.repeat(900);
+  expectSafe(svgWrap('<rect style="stroke-width:' + value + '"/>'), { maxAttributeLength: 12000 });
+});
+
 test('maximum output bytes rejects oversized canonical output', () => {
   expectUnsafe('<svg><rect width="1"/></svg>', 'SVGCAGE_MAX_OUTPUT_BYTES', { maxOutputBytes: 10 });
 });

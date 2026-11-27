@@ -129,6 +129,29 @@ const SAFE_CSS_FUNCTIONS = new Set([
   'translatez'
 ]);
 
+const CSS_MATH_FUNCTIONS = new Set([
+  'abs',
+  'acos',
+  'asin',
+  'atan',
+  'atan2',
+  'calc',
+  'clamp',
+  'cos',
+  'exp',
+  'hypot',
+  'log',
+  'max',
+  'min',
+  'mod',
+  'pow',
+  'round',
+  'sign',
+  'sin',
+  'sqrt',
+  'tan'
+]);
+
 function issue(code, message, detail) {
   return { code, message, ...(detail || {}) };
 }
@@ -188,35 +211,73 @@ function cssStringMask(input) {
 }
 
 function scanCssFunctions(input, mask) {
+  const closeByOpen = new Array(mask.length).fill(-1);
+  const openStack = [];
+  for (let index = 0; index < mask.length; index += 1) {
+    if (mask[index] === '(') {
+      openStack.push(index);
+    } else if (mask[index] === ')' && openStack.length > 0) {
+      closeByOpen[openStack.pop()] = index;
+    }
+  }
+
   const functions = [];
   const pattern = /([A-Za-z_-][A-Za-z0-9_-]*)\s*\(/g;
   let match;
   while ((match = pattern.exec(mask)) !== null) {
     const name = match[1].toLowerCase();
     const open = match.index + match[0].length - 1;
-    let depth = 1;
-    let close = -1;
-    for (let index = open + 1; index < mask.length; index += 1) {
-      if (mask[index] === '(') depth += 1;
-      else if (mask[index] === ')') {
-        depth -= 1;
-        if (depth === 0) {
-          close = index;
-          break;
-        }
-      }
-    }
+    const close = closeByOpen[open];
     if (close === -1) {
       return { functions, invalid: true };
     }
     functions.push({
       name,
       open,
-      close,
-      body: input.slice(open + 1, close)
+      close
     });
   }
   return { functions, invalid: false };
+}
+
+function isCssIdentifierCharacter(character) {
+  if (typeof character !== 'string' || character.length === 0) return false;
+  const unit = character.charCodeAt(0);
+  return isAsciiLetter(character) || isAsciiDigit(character) || character === '-' || character === '_' || unit >= 0x80;
+}
+
+function infiniteConstantAt(mask, lower, index) {
+  let start = index;
+  if (start > 0 && (mask[start - 1] === '+' || mask[start - 1] === '-')) start -= 1;
+  const before = start === 0 ? '' : mask[start - 1];
+  const after = lower[index + 'infinity'.length];
+  return !isCssIdentifierCharacter(before) && !isCssIdentifierCharacter(after);
+}
+
+function cssHasInfiniteConstantInMath(mask, functions) {
+  const deltas = new Array(mask.length + 1).fill(0);
+  let hasMath = false;
+  for (const fn of functions) {
+    if (!CSS_MATH_FUNCTIONS.has(fn.name)) continue;
+    deltas[fn.open + 1] += 1;
+    deltas[fn.close] -= 1;
+    hasMath = true;
+  }
+  if (!hasMath) return false;
+  const lower = mask.toLowerCase();
+  const mathDepth = new Array(mask.length);
+  let depth = 0;
+  for (let index = 0; index < mask.length; index += 1) {
+    depth += deltas[index];
+    mathDepth[index] = depth;
+  }
+  let index = 0;
+  for (;;) {
+    index = lower.indexOf('infinity', index);
+    if (index === -1) return false;
+    if (mathDepth[index] > 0 && infiniteConstantAt(mask, lower, index)) return true;
+    index += 'infinity'.length;
+  }
 }
 
 function cssHasForbiddenOutsideStrings(mask) {
@@ -252,36 +313,39 @@ function cssCanonicalWhitespace(input) {
   return output.trim();
 }
 
-function unquoteCssUrlBody(body) {
-  const trimmed = trimAsciiWhitespaceAndControls(body);
-  if (trimmed.length >= 2) {
-    const first = trimmed[0];
-    const last = trimmed[trimmed.length - 1];
-    if ((first === '"' || first === "'") && last === first) {
-      return trimAsciiWhitespaceAndControls(trimmed.slice(1, -1));
-    }
-  }
-  return trimmed;
+function trimCssUrlRange(input, start, end) {
+  while (start < end && input.charCodeAt(start) <= 0x20) start += 1;
+  while (end > start && input.charCodeAt(end - 1) <= 0x20) end -= 1;
+  return [start, end];
 }
 
-function analyzeCssUrl(body) {
-  const target = unquoteCssUrlBody(body);
-  if (target.length === 0) {
+function analyzeCssUrl(input, bodyStart, bodyEnd) {
+  let start = bodyStart;
+  let end = bodyEnd;
+  [start, end] = trimCssUrlRange(input, start, end);
+  if (end - start >= 2) {
+    const first = input[start];
+    const last = input[end - 1];
+    if ((first === '"' || first === "'") && last === first) {
+      [start, end] = trimCssUrlRange(input, start + 1, end - 1);
+    }
+  }
+  if (start >= end) {
     return issue(ERROR.CSS_INVALID, 'CSS url() reference is empty');
   }
-  if (target.startsWith('#')) {
-    if (!isStrictSvgId(target.slice(1))) {
+  if (input[start] === '#') {
+    const idLength = end - start - 1;
+    const target = idLength <= 128 ? input.slice(start + 1, end) : '';
+    if (idLength > 128 || !isStrictSvgId(target)) {
       return issue(ERROR.CSS_INVALID, 'CSS url() fragment is not a strict safe identifier');
     }
     return null;
   }
-  if (uriProbeLooksActive(target)) {
+  const probe = input.slice(start, Math.min(end, start + 1024));
+  if (uriProbeLooksActive(probe)) {
     return issue(ERROR.CSS_DANGEROUS_CONSTRUCT, 'CSS url() uses an active script URL scheme');
   }
-  if (uriProbeLooksExternal(target)) {
-    return issue(ERROR.CSS_EXTERNAL_REFERENCE, 'CSS url() external references are forbidden; only url(#id) is allowed');
-  }
-  return issue(ERROR.CSS_INVALID, 'CSS url() reference is malformed');
+  return issue(ERROR.CSS_EXTERNAL_REFERENCE, 'CSS url() external references are forbidden; only url(#id) is allowed');
 }
 
 export function cssPropertyAllowsUrl(property) {
@@ -325,6 +389,9 @@ export function analyzeCssValue(property, input, maxCoordinateValue) {
     return { ok: false, canonical: '', issues: [issue(ERROR.CSS_INVALID, 'CSS function parentheses are unbalanced')] };
   }
   const issues = [];
+  if (cssHasInfiniteConstantInMath(maskedResult.mask, scanned.functions)) {
+    issues.push(issue(ERROR.MAX_COORDINATE_VALUE, 'CSS infinite math constants exceed the configured SVG coordinate cap'));
+  }
   const urlAllowed = cssPropertyAllowsUrl(property);
   for (const fn of scanned.functions) {
     if (fn.name === 'url') {
@@ -332,7 +399,7 @@ export function analyzeCssValue(property, input, maxCoordinateValue) {
         issues.push(issue(ERROR.CSS_EXTERNAL_REFERENCE, 'CSS url() is not allowed in the ' + property + ' property'));
         continue;
       }
-      const urlIssue = analyzeCssUrl(fn.body);
+      const urlIssue = analyzeCssUrl(commentless, fn.open + 1, fn.close);
       if (urlIssue !== null) issues.push(urlIssue);
       continue;
     }

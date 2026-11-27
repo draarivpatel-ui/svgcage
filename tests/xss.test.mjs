@@ -289,6 +289,24 @@ test('animation with blank attributeName is removed', () => {
   expectUnsafe(svgWrap('<animate attributeName=" " to="1"/>'), 'SVGCAGE_ATTRIBUTE_NOT_ALLOWED');
 });
 
+test('animation cannot target cursor resource loading', () => {
+  const input = svgWrap('<rect><animate attributeName="cursor" to="u\\72 l(https://evil.example/c.cur)"/></rect>');
+  const result = expectUnsafe(input, 'SVGCAGE_ANIMATION_TARGET_NOT_ALLOWED');
+  assert.ok(!result.svg.includes('cursor'));
+  assert.ok(!result.svg.includes('evil.example'));
+});
+
+test('animation cannot use comment obfuscation toward a disallowed target', () => {
+  const input = svgWrap('<rect><animate attributeName="cursor" to="u/*x*/rl(https://evil.example/c.cur)"/></rect>');
+  expectUnsafe(input, 'SVGCAGE_ANIMATION_TARGET_NOT_ALLOWED');
+});
+
+test('animation cannot target document identity or future resource attributes', () => {
+  for (const target of ['id', 'class', 'contentScriptType', 'color-profile', 'evil-unknown']) {
+    expectUnsafe(svgWrap('<rect><animate attributeName="' + target + '" to="x"/></rect>'), 'SVGCAGE_ANIMATION_TARGET_NOT_ALLOWED');
+  }
+});
+
 test('safe numeric animation survives', () => {
   const result = expectSafe(svgWrap('<rect x="0"><animate attributeName="x" from="0" to="10" dur="1s"/></rect>'));
   assert.ok(result.svg.includes('attributeName="x"'));
@@ -324,8 +342,8 @@ for (const [index, input] of mutationPayloads.entries()) {
 
 test('encoded script text remains inert text rather than markup', () => {
   const result = expectSafe('<svg><text>&lt;script&gt;alert(1)&lt;/script&gt;</text></svg>');
-  assert.ok(result.svg.includes('&lt;script>'));
-  assert.ok(result.svg.includes('&lt;/script>'));
+  assert.ok(result.svg.includes('&lt;script&gt;'));
+  assert.ok(result.svg.includes('&lt;/script&gt;'));
   assert.ok(!/<script/i.test(result.svg));
 });
 

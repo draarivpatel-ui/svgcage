@@ -370,12 +370,13 @@ if (process.platform !== 'win32') {
   });
 }
 
-test('CLI stderr neutralizes ANSI, newline and bidi characters', () => {
-  const evil = 'bad\u001b[31m\n\u202ecommand';
+test('CLI stderr neutralizes ANSI, newline, C1 and bidi characters', () => {
+  const evil = 'bad\u001b[31m\n\u009b\u202ecommand';
   const result = runCli([evil]);
   assert.equal(result.status, 2);
   const firstLine = result.stderr.split('\n')[0];
   assert.ok(!firstLine.includes('\u001b'));
+  assert.ok(!firstLine.includes('\u009b'));
   assert.ok(!firstLine.includes('\u202e'));
 });
 

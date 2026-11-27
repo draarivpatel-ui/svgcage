@@ -112,7 +112,8 @@ const badReferences = [
   '<svg><text>&#xDFFF;</text></svg>',
   '<svg><text>&#xFFFE;</text></svg>',
   '<svg><text>&#xFFFF;</text></svg>',
-  '<svg><text>&#xG;</text></svg>'
+  '<svg><text>&#xG;</text></svg>',
+  '<svg><text>&#X41;</text></svg>'
 ];
 
 for (const [index, input] of badReferences.entries()) {
@@ -130,13 +131,27 @@ test('numeric references decode and serialize canonically', () => {
 
 test('predefined entities decode and serialize canonically', () => {
   const result = expectSafe('<svg><text>&lt;&gt;&amp;&quot;&apos;</text></svg>');
-  assert.ok(result.svg.includes('&lt;>&amp;"\''));
+  assert.ok(result.svg.includes('&lt;&gt;&amp;"\''));
 });
 
 test('CDATA is converted to ordinary escaped text', () => {
   const result = expectSafe('<svg><text><![CDATA[x<y&z]]></text></svg>');
   assert.ok(result.svg.includes('x&lt;y&amp;z'));
   assert.ok(!result.svg.includes('CDATA'));
+});
+
+test('CDATA boundary cannot synthesize a text CDATA terminator', () => {
+  const result = expectSafe('<svg><text>]]<![CDATA[>x]]></text></svg>');
+  assert.ok(result.svg.includes(']]&gt;x'), result.svg);
+  const second = sanitizeSvg(result.svg);
+  assert.equal(second.svg, result.svg);
+});
+
+test('comment removal cannot synthesize a text CDATA terminator', () => {
+  const result = expectSafe('<svg><text>]]<!--x-->&#62;</text></svg>');
+  assert.ok(result.svg.includes(']]&gt;'), result.svg);
+  const second = sanitizeSvg(result.svg);
+  assert.equal(second.svg, result.svg);
 });
 
 test('comments are removed without a finding', () => {

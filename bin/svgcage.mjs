@@ -31,7 +31,7 @@ function neutralizeStderr(value) {
   for (const character of String(value)) {
     const codePoint = character.codePointAt(0);
     const bidi = (codePoint >= 0x202a && codePoint <= 0x202e) || (codePoint >= 0x2066 && codePoint <= 0x2069) || codePoint === 0x200e || codePoint === 0x200f;
-    if (codePoint === 0x1b || codePoint < 0x20 || codePoint === 0x7f || bidi) {
+    if (codePoint === 0x1b || codePoint < 0x20 || (codePoint >= 0x7f && codePoint <= 0x9f) || bidi) {
       output += '?';
     } else {
       output += character;

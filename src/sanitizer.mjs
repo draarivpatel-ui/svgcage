@@ -398,6 +398,23 @@ const URL_CAPABLE_ANIMATION_TARGETS = new Set([
   'marker-end'
 ]);
 
+const NON_ANIMATABLE_GENERAL_ATTRIBUTES = new Set([
+  'id',
+  'class',
+  'role',
+  'tabindex',
+  'focusable',
+  'lang',
+  'version',
+  'baseProfile'
+]);
+
+const ANIMATION_TARGET_ATTRIBUTES = new Set([
+  ...CSS_ALLOWED_PROPERTIES,
+  ...Array.from(GENERAL_ATTRIBUTES).filter((name) => !NON_ANIMATABLE_GENERAL_ATTRIBUTES.has(name)),
+  'path'
+]);
+
 function asciiLower(value) {
   return value.replace(/[A-Z]/g, (character) => character.toLowerCase());
 }
@@ -794,7 +811,10 @@ function animationTargetName(raw) {
   const trimmed = trimAsciiWhitespaceAndControls(raw);
   const colon = trimmed.lastIndexOf(':');
   const local = colon === -1 ? trimmed : trimmed.slice(colon + 1);
-  return asciiLower(local);
+  return {
+    exact: local,
+    lower: asciiLower(local)
+  };
 }
 
 function animationValues(element) {
@@ -813,22 +833,31 @@ function validateAnimationElement(element, ctx) {
     return false;
   }
   const target = animationTargetName(rawTarget);
-  if (target.length === 0 || target.includes(' ') || target.includes('\t')) {
+  let malformedTarget = target.exact.length === 0;
+  for (let index = 0; index < target.exact.length; index += 1) {
+    const unit = target.exact.charCodeAt(index);
+    if (unit <= 0x20 || unit === 0x7f) malformedTarget = true;
+  }
+  if (malformedTarget) {
     ctx.stripElement(element, ERROR.ATTRIBUTE_NOT_ALLOWED, 'SVG animation target attributeName is malformed');
     return false;
   }
-  if (target.startsWith('on')) {
+  if (target.lower.startsWith('on')) {
     ctx.stripElement(element, ERROR.ANIMATION_EVENT_TARGET, 'SVG animation elements must not target event handler attributes');
     return false;
   }
-  if (target === 'href' || target === 'src' || target === 'srcset' || target === 'action' || target === 'formaction' || target === 'poster' || target === 'background' || target === 'data' || target === 'style' || target === 'xlink:href') {
+  if (target.lower === 'href' || target.lower === 'src' || target.lower === 'srcset' || target.lower === 'action' || target.lower === 'formaction' || target.lower === 'poster' || target.lower === 'background' || target.lower === 'data' || target.lower === 'style' || target.lower === 'xlink:href') {
     ctx.stripElement(element, ERROR.ANIMATION_HREF_TARGET, 'SVG animation elements must not mutate URL, style, or resource-loading attributes');
     return false;
   }
+  if (!ANIMATION_TARGET_ATTRIBUTES.has(target.exact)) {
+    ctx.stripElement(element, ERROR.ANIMATION_TARGET_NOT_ALLOWED, 'SVG animation target is outside the strict animatable attribute allowlist');
+    return false;
+  }
   const values = animationValues(element);
-  if (URL_CAPABLE_ANIMATION_TARGETS.has(target)) {
+  if (URL_CAPABLE_ANIMATION_TARGETS.has(target.exact)) {
     for (const value of values) {
-      const analysis = analyzeCssValue(target, value, ctx.policy.maxCoordinateValue);
+      const analysis = analyzeCssValue(target.exact, value, ctx.policy.maxCoordinateValue);
       if (!analysis.ok) {
         for (const item of analysis.issues) {
           ctx.note(item.code, item.message, {
