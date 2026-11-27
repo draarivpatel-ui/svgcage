@@ -4,7 +4,7 @@ Zero-dependency SVG security sanitization, strict XML parsing, auditing, and can
 
 `svgcage` is a fail-closed boundary for untrusted SVG. It treats SVG as active content rather than as a passive image format. The default policy blocks script execution, event handlers, `foreignObject`, embedded HTML and media elements, DTD and entity markup, processing instructions, external resource fetching, active URL schemes, unsafe CSS, namespace confusion, resource exhaustion, coordinate abuse, path bombs, and recursive `<use>` amplification.
 
-The library ships ESM, CommonJS, TypeScript declarations, and a CLI from one audited source tree. It has zero runtime dependencies and zero devDependencies. The deterministic suite contains more than 600 tests.
+The library ships ESM, CommonJS, TypeScript declarations, and a CLI from one audited source tree. It has zero runtime dependencies. `fast-check` is a development-only fuzzing dependency. The deterministic suite contains more than 600 tests.
 
 ## Publication status
 

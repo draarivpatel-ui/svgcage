@@ -4,7 +4,7 @@ Thanks for helping improve a zero-dependency security library.
 
 ## Ground rules
 
-- Keep runtime dependencies and devDependencies empty.
+- Keep runtime dependencies empty. `fast-check` is the only development dependency and is used only for property-based fuzz tests.
 - Keep Node 18 compatibility.
 - Fail closed when SVG, XML, CSS, namespace, or URL behavior is ambiguous.
 - Do not weaken an existing default to make a payload parse.

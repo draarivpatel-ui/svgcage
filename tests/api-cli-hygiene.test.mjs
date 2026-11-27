@@ -386,7 +386,7 @@ test('package metadata is zero dependency and dual format', () => {
   assert.equal(pkg.version, '1.0.0');
   assert.equal(pkg.type, 'module');
   assert.deepEqual(pkg.dependencies, {});
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(pkg.devDependencies, { 'fast-check': '4.10.3' });
   assert.equal(pkg.main, './cjs/index.cjs');
   assert.equal(pkg.module, './src/index.mjs');
   assert.equal(pkg.types, './types/index.d.ts');
